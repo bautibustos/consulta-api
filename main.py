@@ -4,18 +4,21 @@ import httpx
 import json
 from datetime import datetime, timezone
 import asyncio
-import pytz
 
 # Carga las variables de entorno del archivo .env
-load_dotenv()
+# ¡Esta línea debe ser una de las primeras en ejecutarse!
+load_dotenv() 
 
 # --- Configuración de Supabase y API ---
+# Ahora os.getenv() no tiene valores por defecto.
+# Si la variable de entorno no existe, retornará None.
 SUPABASE_URL_BASE = os.getenv("SUPABASE_URL_BASE")
 SUPABASE_TABLE_NAME = os.getenv("SUPABASE_TABLE_NAME")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 API_TO_CONSULT = os.getenv("API_TO_CONSULT")
 
 # --- Validación de variables de entorno ---
+# Es crucial validar que las variables no sean None antes de usarlas
 if not all([SUPABASE_URL_BASE, SUPABASE_TABLE_NAME, SUPABASE_SERVICE_ROLE_KEY, API_TO_CONSULT]):
     missing_vars = [
         name for name, value in {
@@ -26,7 +29,7 @@ if not all([SUPABASE_URL_BASE, SUPABASE_TABLE_NAME, SUPABASE_SERVICE_ROLE_KEY, A
         }.items() if value is None
     ]
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Las siguientes variables de entorno no están configuradas: {', '.join(missing_vars)}")
-    exit(1)
+    exit(1) # Termina el script si faltan variables
 
 # --- Función principal ---
 async def perform_api_and_supabase_action():
@@ -49,34 +52,12 @@ async def perform_api_and_supabase_action():
 
             parsed_data = response.json()
 
+            # Solo guardar el contenido exacto de "leagues"
             if "leagues" not in parsed_data:
                 raise KeyError("La clave 'leagues' no está presente en la respuesta de la API.")
             data_to_store = parsed_data["leagues"]
 
-            # --- Conversión de zona horaria: Buenos Aires -> UTC ---
-            promiedos_timezone = pytz.timezone('America/Argentina/Buenos_Aires')
-            target_timezone = pytz.timezone('UTC')
-
-            for league in data_to_store:
-                if 'games' in league and isinstance(league['games'], list):
-                    for game in league['games']:
-                        if 'start_time' in game and isinstance(game['start_time'], str):
-                            try:
-                                time_str = game['start_time']
-                                original_dt_naive = datetime.strptime(time_str, "%d-%m-%Y %H:%M")
-                                original_dt_aware = promiedos_timezone.localize(original_dt_naive)
-                                converted_dt = original_dt_aware.astimezone(target_timezone)
-
-                                game['start_time_original'] = time_str
-                                game['start_time'] = converted_dt.strftime("%d-%m-%Y %H:%M")
-                                game['start_time_iso_utc'] = converted_dt.isoformat()
-
-                            except ValueError as ve:
-                                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Advertencia: No se pudo parsear el tiempo '{game.get('start_time')}' - {ve}")
-                            except Exception as ex:
-                                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Advertencia: Error inesperado al convertir tiempo '{game.get('start_time')}' - {ex}")
-            # --- Fin de conversión de zona horaria ---
-
+        # Preparar el payload para Supabase
         current_time_utc = datetime.now(timezone.utc).isoformat()
         payload = {
             "id": "test",
