@@ -1,13 +1,35 @@
+from dotenv import load_dotenv
+import os
 import httpx
 import json
 from datetime import datetime, timezone
 import asyncio
 
+# Carga las variables de entorno del archivo .env
+# ¡Esta línea debe ser una de las primeras en ejecutarse!
+load_dotenv() 
+
 # --- Configuración de Supabase y API ---
-SUPABASE_URL_BASE = "https://zziggacoidbcxehtfcyw.supabase.co"
-SUPABASE_TABLE_NAME = "matches_today"
-SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aWdnYWNvaWRiY3hlaHRmY3l3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjcwMzE3NSwiZXhwIjoyMDY4Mjc5MTc1fQ.2ApYJv4-Ir6QBCC1fLMs5c49CMSh2_tzZhcTu8yvLhw"
-API_TO_CONSULT = "https://api.promiedos.com.ar/games/today"
+# Ahora os.getenv() no tiene valores por defecto.
+# Si la variable de entorno no existe, retornará None.
+SUPABASE_URL_BASE = os.getenv("SUPABASE_URL_BASE")
+SUPABASE_TABLE_NAME = os.getenv("SUPABASE_TABLE_NAME")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+API_TO_CONSULT = os.getenv("API_TO_CONSULT")
+
+# --- Validación de variables de entorno ---
+# Es crucial validar que las variables no sean None antes de usarlas
+if not all([SUPABASE_URL_BASE, SUPABASE_TABLE_NAME, SUPABASE_SERVICE_ROLE_KEY, API_TO_CONSULT]):
+    missing_vars = [
+        name for name, value in {
+            "SUPABASE_URL_BASE": SUPABASE_URL_BASE,
+            "SUPABASE_TABLE_NAME": SUPABASE_TABLE_NAME,
+            "SUPABASE_SERVICE_ROLE_KEY": SUPABASE_SERVICE_ROLE_KEY,
+            "API_TO_CONSULT": API_TO_CONSULT
+        }.items() if value is None
+    ]
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Las siguientes variables de entorno no están configuradas: {', '.join(missing_vars)}")
+    exit(1) # Termina el script si faltan variables
 
 # --- Función principal ---
 async def perform_api_and_supabase_action():
@@ -72,7 +94,7 @@ async def perform_api_and_supabase_action():
     except json.JSONDecodeError as e:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ERROR: La respuesta NO es JSON válido.")
         print("Detalle del error:", e)
-        print("Contenido crudo (inicio):", response.text[:500])
+        print("Contenido crudo (inicio):", response.text[:500] if 'response' in locals() else "No response content available")
     except KeyError as e:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Clave faltante en JSON - {e}")
     except Exception as e:
