@@ -2,12 +2,12 @@ from dotenv import load_dotenv
 import os
 import httpx
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import asyncio
 
 # Carga las variables de entorno del archivo .env
 # ¡Esta línea debe ser una de las primeras en ejecutarse!
-load_dotenv() 
+load_dotenv()
 
 # --- Configuración de Supabase y API ---
 # Ahora os.getenv() no tiene valores por defecto.
@@ -45,10 +45,6 @@ async def perform_api_and_supabase_action():
                 raise ValueError("La respuesta de la API está vacía")
 
             print("Longitud de la respuesta:", len(response.text))
-            print("Primeros 300 caracteres:")
-            print(response.text[:300])
-            print("Últimos 100 caracteres:")
-            print(response.text[-100:])
 
             parsed_data = response.json()
 
@@ -56,6 +52,16 @@ async def perform_api_and_supabase_action():
             if "leagues" not in parsed_data:
                 raise KeyError("La clave 'leagues' no está presente en la respuesta de la API.")
             data_to_store = parsed_data["leagues"]
+
+            # --- Modificación para sumar 2 horas a los campos de tiempo ---
+            if isinstance(data_to_store, list):
+                for item in data_to_store:
+                    #print("itemmmmmmmmm",item["games"][0]["start_time"])
+                    fecha_mal = datetime.strptime(item["games"][0]["start_time"], "%d-%m-%Y %H:%M")
+                    fecha_ok=fecha_mal+ timedelta(hours=2)
+                    #print(fecha_ok)
+                    item["games"][0]["start_time"] = fecha_ok.strftime("%d-%m-%Y %H:%M")
+            # --- Fin de la modificación de tiempo ---
 
         # Preparar el payload para Supabase
         current_time_utc = datetime.now(timezone.utc).isoformat()
