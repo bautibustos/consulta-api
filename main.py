@@ -55,12 +55,16 @@ async def perform_api_and_supabase_action():
 
             # --- Modificación para sumar 2 horas a los campos de tiempo ---
             if isinstance(data_to_store, list):
+                #   Se suman las 2 horas por desfase de api de promiedos
+
                 for item in data_to_store:
-                    #print("itemmmmmmmmm",item["games"][0]["start_time"])
-                    fecha_mal = datetime.strptime(item["games"][0]["start_time"], "%d-%m-%Y %H:%M")
-                    fecha_ok=fecha_mal+ timedelta(hours=2)
-                    #print(fecha_ok)
-                    item["games"][0]["start_time"] = fecha_ok.strftime("%d-%m-%Y %H:%M")
+                    for i in item["games"]:
+                        #print("itemmmmmmmmm", item)
+                        #print("item",i["start_time"])
+                        fecha_mal = datetime.strptime(i["start_time"], "%d-%m-%Y %H:%M")
+                        fecha_ok=fecha_mal+ timedelta(hours=2)
+                        #print("fecha ok",fecha_ok)
+                        i["start_time"] = fecha_ok.strftime("%d-%m-%Y %H:%M")
             # --- Fin de la modificación de tiempo ---
 
         # Preparar el payload para Supabase
